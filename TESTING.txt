@@ -1,0 +1,732 @@
+**************************************************************************************************************************************************************************
+Part1: Clarification for myShell
+     
+     1. If we just run "cd", myShell will go to the home directory "/home/fl94"
+     2. The user defined variables and the environment variables are put in two separate maps. When we use "$" to evaluate variables, myShell will search 
+     	the map of user defined variables first. If found, myShell replaces the variable with its value; 
+     	if not, myShell goes on to search the environment variables map to find the variable.
+     3. Environment variables can only be changed by the "export" operation. If you want to update an environment variable's value, you should "export" this var.
+     4. When "$" is not followed by a valid variable name, the "$" does not perform the evaluation, just a regular "$" character.
+     5. The "inc" result will be shown as scientific notation when the value to increase is larger than 1000000.
+     	When the fractional part of the value to increase is smaller than 0.00001, the "inc" result will be rounded.
+     5. More than one same-type redirection marks in command line, such as "> out1 > out2", is illegal input.
+     6. Extra commands such as "exit", "cd", "set", "export" and "inc" cannot work as separate processes in the pipes.
+     7. Redirection marks "<", ">", "2>" and pipeline mark "|" work only when they are divided with other arguments by spaces.
+     8. Commands should always be typed first. Redirection marks should go after the commands.
+     9. To avoid conflicts between pipes and redirections, in the pipeline, only the first process can have the input redirection,
+     	and only the last process can have the output or the error output redirection.
+All these clarifications will be tested in Part2.
+
+*************************************************************************************************************************************************************************
+Part2: Testing
+
+Run ./myShell or valgrind ./myShell to begin the testing
+The prompt "myShell:/home/fl94/ece551/mp_miniproject $" will be printed
+Then we can type input command lines and run them
+  
+2.1 Step 1 Testing
+  1. Run "\n" (the enter key) or "     \n" or "\t\t\n"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    myShell:/home/fl94/ece551/mp_miniproject
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because when there is no input command, myShell prints the prompt again, waiting for the next input command line. 
+    The prompt will be printed for every command line input until you exit myShell.
+  2. Run "./test_hello"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Hello
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell runs the program ./test_hello (the program is to print "Hello") successfully.
+    The exit status of this program is also be printed. 
+  3. Run "/bin/pwd"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    /home/fl94/ece551/mp_miniproject
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell runs the program /bin/pwd (the program is to print current directory) successfully.
+    The exit status of this program is also be printed. 
+  4. Run "./test_broken1"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    *** stack smashing detected ***: <unknown> terminated
+    Program was killed by signal 6
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell runs the broken program 1 which terminates because of writing data to the place out of array range.
+    The exit status of this broken program is also be printed. 
+  5. Run "./test_broken2"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Program was killed by signal 11
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell runs the broken program 2 which writes data to the place that cannot be written.
+    The exit status of this broken program is also be printed. 
+  6. Run "./test_broken3"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ERROR: No such file or directory
+    Program exited with status 1
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell runs the broken program 3 which prints the error message of file opening failure.
+    The exit status of this broken program is also be printed. 
+  7. Run "./noprogram"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Cannot execute: No such file or directory
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell cannot find an executable file called "noprogram" in current directory.
+    The input command contains slash, so myShell will not search the environment PATH to find the program.
+  8. Run "./input.txt"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Cannot execute: Permission denied
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because input.txt cannot be executed.
+  9. Run "exit" or input EOF
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Exit successfully
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    and myShell exits with clean valgrind. This is correct because myShell should exit when the user types "exit" or EOF.
+    You can run ./myShell or valgrind ./myShell to restart myShell.
+  
+  2.2 Step 2 Testing
+  1. Run "ls      -a         " or "      ls    -a       "
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    .      check_redir_pipes.cpp  getcmd_impl.cpp  parse_input.cpp    test_broken2      test_inout
+    ..       commandShell.txt     input.txt      shell_free_impl.cpp  test_broken2.cpp  test_inout.cpp
+    .honor       env_path.cpp     myShell      test_argv      test_broken3
+    Makefile     exe_extra_impl.cpp     myShell.cpp      test_argv.cpp    test_broken3.cpp
+    README       exe_impl.cpp     myShell.h      test_broken1   test_hello
+    TESTING.txt  free_envp.cpp      numerics.txt     test_broken1.cpp   test_hello.cpp
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because "ls" does not contain a slash, myShell searches the "ls" program in environment PATH, finds /bin/ls,
+    executes /bin/ls and passes in the argument "-a". The white spaces in command line input work as separator between arguments. 
+  2. Run "cat ./nonexist"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    cat: ./nonexist: No such file or directory
+    Program exited with status 1
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the input file name in argument does not exist.
+  3. Run "nocommand"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Command nocommand is not found or cannot be executed
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell cannot find "nocommand" in ECE551PATH.
+  4. Run "./test_argv       a     b\ c\ d    e\ \ f   \ \ g" 
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    argv is a
+    argv is b c d
+    argv is e  f
+    argv is   g
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because any white spaces escaped with a \ should be included in the argument. 
+  5. Run "./test_argv a b\ cd \e\\f\\\g \h\ \i      \l\ m"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    argv is a
+    argv is b cd
+    argv is e\f\g
+    argv is h i
+    argv is l m
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because any character after \ is considered as escaped, working as a plain character.
+  
+  2.3 Step 3 Testing
+  1. Run "cd"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    myShell:/home/fl94 $
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell goes to the home directory "/home/fl94" when no destination directory is typed.
+  2. Then Run "cd ece551"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    myShell:/home/fl94/ece551 $
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell goes to the relative directory /home/fl94/ece551.
+  3. Run "cd /home/fl94/ece551/mp_miniproject"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    myShell:/home/fl94/ece551/mp_miniproject $
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell goes to the absolute directory /home/fl94/ece551/mp_miniproject.
+  4. Run "cd /root"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    chdir: Permission denied
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell wants to change to root directory but denied without permission.
+  5. Run "cd  ."
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    myShell:/home/fl94/ece551/mp_miniproject $
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell should stay in current directory when input is ".".
+  6. Run "cd .."
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    myShell:/home/fl94/ece551 $
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell should go up one directory, when input is "..".
+  7. Run "cd /" Then run "cd .."
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    myShell:/ $
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because "/" is the top directory. myShell cannot go up any more, just staying in this directory.
+    You can type "cd /home/fl94/ece551/mp_miniproject" to go back to former working directory.
+  8. Run "cd /bin /usr/bin /var"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: To many arguments
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the cd command can only take one argument.
+  9. Run "cd     /noexist"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    chdir: No such file or directory
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the destination directory does not exist.
+  10. Run "set"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: Invalid input
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the "set" command should take two arguments (var value).
+  11. Run "set x"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: Invalid input
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the "set" command should take two arguments (var value).
+  12. Run "set x! y!"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: Invalid var
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because variable name can only contain letters, underscores and numbers.
+  13. Run "set x "
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Set $x as 
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "echo a$x-", it prints 
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------  
+    a-
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because x is set to a empty string.
+  14. Run "set my_var happy"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------  
+    Set $my_var as happy
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "set my_var2  today", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Set $my_var2 as  today
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "echo You are $my_var$my_var2. I am un$my_var$my_var2.", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    You are happy today. I am unhappy today.
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because in the first two commands, my_var and my_var2 are set to the string on the rest of the command line they are in.
+    In the third command, variables are replaces by their values. 
+  15. Run "set x ls         -a          "
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Set $x as ls         -a          
+
+    Then run "$x". You will see it prints the same as 2.2 test1, which is correct because in the first command,
+    x is set to the string on the rest of command line "ls         -a          ", in the second command, x is evaluated,
+    replaced by its current value; then myShell will execute this command line.
+  16. Run "echo $z" 
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    The value of z is none
+
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the value of y has not been set yet. For echo command, it will be evaluated to empty.
+  17. Run "     set     66 y", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Set $66 as y
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "set $66 y$66", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Set $y as yy
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "echo $66~$66", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    y~y
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    Then run "echo $$$$$$$66$$$$66"
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    $$$$$$y$$$y
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    In the second command line, "$66" is replaced by its value "y". The "$" will evaluate the valid variable name following it.
+    This command changes to "set y yy". When "$" does not followed by a valid variable name, the "$" is just a regular "$" character.
+  18. Run "set x y", "set x      \ \ $x", and then "echo $x", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      y
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    In the second command line, "$x" is replaced by its value "y". The value of "x”has become "     \ \ $x". 
+    In the third command, after "$x" is replaced by "     \ \ $x", myShell executes the "echo" command, white spaces without "\" are ignored.
+  19. Run "export"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: Invalid input
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the "export" command should take one argument (var).
+  20. Run "export a b", or "export !"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: Invalid input
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the "export" command should take one argument (var).
+    The var should be a valid variable name.
+  21. Run "export nonexist"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    The value of nonexist is none. Cannot be exported
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the "export" command cannot export variables that have not been defined yet.
+  22. Run "set x a", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Set $x as a
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    Then run "export x", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+    Export x as environment variable.
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "env", at the end of output you will see
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+    x=a
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    Then run "set x b", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+    Set $x as b
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "env", at the end of output you will see
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+    x=a
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   
+    Then run "export x", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+    Export x as environment variable.
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  
+    Then run "env", at the end of output you will see
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+    x=b
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    These are correct because
+    first, when you "set" a variable "x" but not "export" it, it is only placed in the user variable map, should not show up in "env"
+    second, after "export x", this variable "x" is placed in environment, it will show up in "env"
+    third, you change the value of "x" but not "export" it, it only updates the one in user variable map,
+    fourth, after "export x", the one in environment will be updated.
+    The environment variables can only be changed by the "export" operation.
+  23. Run "echo $ECE551PATH", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "set ECE551PATH ./", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Set $ECE551PATH as ./
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    
+    Then run "export ECE551PATH", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Export ECE551PATH as environment variable.
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "/usr/bin/env", you will see the PATH value is changed
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+    ......
+    ECE551PATH=./
+    ......
+    x=b
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    Then run "ls", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Command ls is not found or cannot be executed
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "test_hello", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Hello
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "./myShell", and "/usr/bin/env" you will see the same environment variable as in the parent process
+    ......
+    ECE551ATH=./
+    ......
+    x=b
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "ls", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Command ls is not found or cannot be executed
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then run "test_hello", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Hello
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    These are correct because
+    first, if the user changes ECE551PATH, it should affect where myShell searches for programs. If we set "ECE551PATH" to current work directory "./",
+    myShell only search commands in this directory, we can execute program in "./" without typing slash.
+    second, the "export command" should put the value of var into the environment for other programs, when we run myShell in myShell, the environment of 
+    the inner myShell is passed in by the outer myShell
+
+    You can exit the myShell in myShell by typing in "exit" or EOF, 
+    You can "set ECE551PATH $PATH", and then "export ECE551PATH" it to continue our test
+  24. Run "inc" or "inc !" or "inc j k" it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: Invalid input
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the "inc" command only take one argument (var).]
+    The var should be a valid variable name.
+  25. Run "inc notset", then "echo $notset" it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    1
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because "notset" is not currently set, the initial number is treated as 0, and thus incremented to 1
+  26. Run "set x 66", "inc x" and then "echo $x", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    67
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell interprets the value of "x" as a number (base 10), and increments it.
+  27. Run "set x 66.6", "inc x" and then "echo $x", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    67.6
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell interprets the value of "x" as a number (base 10), and increments it by 1.
+  28. Run "set x 6abc", "inc x" and then "echo $x", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    1
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the value of "x" does not represent a number, the initial number is treated as 0, and thus incremented to 1
+  29. Run "set x a", "set y b", "set $x$y 3e4","inc ab", "inc a$y"
+  and then "echo $ab", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    30002
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell interprets the value of "ab" as a number (base 10), and increments it.
+  30. Run "set x 3.4.5", "inc x", "inc x", "inc x", "echo $x"
+  and then "echo $ab", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   	3
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the value of "x" does not represent a number, the initial number is treated as 0.
+  31. Run "set x 3 4 5", "inc x", "inc x", "inc x", "echo $x"
+  and then "echo $ab", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   	3
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the value of "x" does not represent a number, the initial number is treated as 0.
+  32. Run "set x 1e6", "inc x", "echo $x"
+  and then "echo $ab", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   	1e+06
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the value of "x" is shown as scientific notation.
+
+2.4 Step 4 Testing
+  1. Run "cat <", "ls >", "cat nonexist 2>", it prints the same
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: Filename needed for redirections
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the redirection filename cannot be empty
+  2. Run "cat <input.txt", or "ls >output.txt", or "cat nonexist 2>output.txt"
+     The inputs or outputs cannot be redirected because redirection marks "<", ">", "2>" work only when they are divided with other arguments by spaces.
+  3. Run "cat < input.txt", you will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Hades
+    Orpheus
+    Eurydice
+    Gaea
+    Athena
+    Zeus
+    Hera
+    Apollo
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because myShell does redirection, stdin is replaced by input file content
+  4. Run "cat < nonexist"
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Input file error: No such file or directory
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the redirection input file must exist and can be read
+  5. Run "emacs read_protected" to create a file, run "chmod a-r read_protected" to make this file read protected, then run "cat < read_protected", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Input file error: Permission denied
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the redirection input file must exist and can be read.
+    You can use "rm" to remove this file "read_protected"
+  6. Run "cat -n < input.txt"
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+         1  Hades
+         2  Orpheus
+         3  Eurydice
+         4  Gaea
+         5  Athena
+         6  Zeus
+         7  Hera
+         8  Apollo
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the "cat" command takes argument "-n" and read from redirected input.
+  7. Run "ls -a > out1", "cat out1", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    .
+    ..
+    .honor
+    Makefile
+    README
+    TESTING.txt
+    check_redir_pipes.cpp
+    commandShell.txt
+    env_path.cpp
+    exe_extra_impl.cpp
+    exe_impl.cpp
+    free_envp.cpp
+    getcmd_impl.cpp
+    input.txt
+    myShell
+    myShell.cpp
+    myShell.h
+    numerics.txt
+    out1
+    parse_input.cpp
+    shell_free_impl.cpp
+    test_argv
+    test_argv.cpp
+    test_broken1
+    test_broken1.cpp
+    test_broken2
+    test_broken2.cpp
+    test_broken3
+    test_broken3.cpp
+    test_hello
+    test_hello.cpp
+    test_inout
+    test_inout.cpp
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the output of "ls -a" is redirected from stdout to the output file.
+  8. Run "cat -n < input.txt < input.txt", or "ls > out1 > out1",
+    or "cat nonexist 2> output.txt 2> output.txt", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: More than one redirection mark
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because more than one same-type redirection marks in the command line are illegal input.
+  9. Run "cat nonexist > out1", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    cat: nonexist: No such file or directory
+    Program exited with status 1
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    If you "cat out1", you will find that out 1 is created but empty. This is correct because in the command, stdout rather than stderr is redirected.
+    So myShell still prints the error message.
+  10. Run "cat nonexist 2> out1",it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Program exited with status 1
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    Then you run "cat out1", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    cat: nonexist: No such file or directory
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the stderr is redirected this time.
+  11. Run "ls > input.txt", or cat nonexist 2> input.txt", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Output file error: Permission denied
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the file "input.txt" is write protected.
+  12. Run "cat -n < input.txt > out2", then "cat out2", it prints
+     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+         1  Hades
+         2  Orpheus
+         3  Eurydice
+         4  Gaea
+         5  Athena
+         6  Zeus
+         7  Hera
+         8  Apollo
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    You run "cat < input.txt -n > out3", "cat < input.txt > out4 -n", "cat > out5 -n < input.txt".
+    You will find that "out2", out3", "out4" and "out5" have the same contents.
+    This is correct because the order of arguments, input and output redirections do not matter.
+    However, commands should always be typed first. Redirection marks should go after the commands. 
+    So command lines such as "> out5 cat -n < input.txt" does not work.
+  13. Run "cat -n < input.txt | cat -E > out1 ", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Program exited with status 0
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    if you run "cat out1", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+         1  Hades$
+         2  Orpheus$
+         3  Eurydice$
+         4  Gaea$
+         5  Athena$
+         6  Zeus$
+         7  Hera$
+         8  Apollo$
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the first process takes in argument and file content, adding a number to each line, 
+    then pipes the output to the second process to add "$" at the end of each line. The second process finally redirects the output to file
+    and sort print the output.
+  14. Run "cat |", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: Invalid pipes input
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because processes in pipeline cannot be empty.
+  15. Run "cat < input.txt > out1 | cat" or "cat | cat < input.txt > out1" or "cat < input.txt | cat > out1 | cat"
+  You will see three kinds of syntax error message.
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Syntax error: The first process cannot have output redirection
+    Syntax error: The last process cannot have input redirection
+    Syntax error: The processes in middle cannot have redirections
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because to avoid conflicts between pipes and redirections, in the pipeline, only the first process can have the input redirection,
+    and only the last process can have the output or the error output redirection.
+  16. Run "./test_inout in out < input.txt | ./test_inout in out | ./test_inout in out |  ./test_inout in out |  ./test_inout in out > out6"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    If you run "cat out6", myShell prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Hades
+    Orpheus
+    Eurydice
+    Gaea
+    Athena
+    Zeus
+    Hera
+    Apollo
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because the pipe works successfully. The input content is piped along the line to the output file.
+  17. Run "ls | gcc", the result can be
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    gcc: fatal error: no input files
+    compilation terminated.
+    Program exited with status 1
+    Program was killed by signal 13
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    or
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Program exited with status 0
+    gcc: fatal error: no input files
+    compilation terminated.
+    Program exited with status 1
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    which is correct because two processes are executed concurrently.
+    If the "gcc" fails before "ls" finishing the execution, the pipe no longer valid and "ls" is killed by signal 13. 
+    If the "ls" finishes first, exit status of thses two processes will be printed.
+  18. Run "./test_largeio | cat | cat | cat | cat | cat | cat | cat | cat | cat > largeout.txt"
+    You will see it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Then you run "stat largeout", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      File: largeout
+      Size: 1400000     Blocks: 2736       IO Block: 4096   regular file
+    Device: fd00h/64768d    Inode: 6666612     Links: 1
+    Access: (0664/-rw-rw-r--)  Uid: ( 1274/    fl94)   Gid: ( 1277/    fl94)
+    Access: 2018-12-02 21:10:22.496949327 -0500
+    Modify: 2018-12-02 21:10:24.644986356 -0500
+    Change: 2018-12-02 21:10:24.644986356 -0500
+    Birth: -
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    Then you run "stat largeout.txt", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      File: largeout
+      Size: 1400000     Blocks: 2736       IO Block: 4096   regular file
+    Device: fd00h/64768d    Inode: 6666612     Links: 1
+    Access: (0664/-rw-rw-r--)  Uid: ( 1274/    fl94)   Gid: ( 1277/    fl94)
+    Access: 2018-12-02 21:10:22.496949327 -0500
+    Modify: 2018-12-02 21:10:24.644986356 -0500
+    Change: 2018-12-02 21:10:24.644986356 -0500
+    Birth: -
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    These two files are same, which shows that large data can be transmitted in the pipes of myShell.
+  19. Run "set x -n < input.txt | cat -E > out7", then "cat $x", it prints
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Program exited with status 0
+    Program exited with status 0
+    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    if you run "cat out7", it prints the same as 2.4 test 13,
+    which is correct because the "set" command works as usual, does not influenced by redirections and pipes.
+    
+
+    Finally, you can finish the testing by typing "exit" or EOF. myShell will exit with clean valgrind.
