@@ -1,7 +1,7 @@
 # Simplified-command-shell
 
 
-This is a simplified command shell.You can test it by following the TESTING.txt.
+This is a simplified command shell. You can test it by following the TESTING.txt.
 
 
 This simplified command shell can execute commands (in relative and absolute paths) and then indicate the terminate states of execution.
